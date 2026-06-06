@@ -1,11 +1,10 @@
 package com.opencommerce.authservice.service.impl;
 
-import com.opencommerce.authservice.dto.request.LoginRequest;
-import com.opencommerce.authservice.dto.request.RefreshTokenRequest;
-import com.opencommerce.authservice.dto.request.RegisterRequest;
+import com.opencommerce.authservice.dto.request.*;
 import com.opencommerce.authservice.dto.response.ApiResponse;
 import com.opencommerce.authservice.dto.response.AuthResponse;
 import com.opencommerce.authservice.dto.response.UserResponse;
+import com.opencommerce.authservice.entity.EmailVerificationToken;
 import com.opencommerce.authservice.entity.RefreshToken;
 import com.opencommerce.authservice.entity.Role;
 import com.opencommerce.authservice.entity.User;
@@ -15,11 +14,13 @@ import com.opencommerce.authservice.exception.RefreshTokenNotFoundException;
 import com.opencommerce.authservice.exception.RoleNotFoundException;
 import com.opencommerce.authservice.exception.UserAlreadyExistsException;
 import com.opencommerce.authservice.mapper.UserMapper;
+import com.opencommerce.authservice.repository.EmailVerificationTokenRepository;
 import com.opencommerce.authservice.repository.RefreshTokenRepository;
 import com.opencommerce.authservice.repository.RoleRepository;
 import com.opencommerce.authservice.repository.UserRepository;
 import com.opencommerce.authservice.security.JwtService;
 import com.opencommerce.authservice.service.AuthService;
+import com.opencommerce.authservice.service.EmailService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,10 +47,15 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final EmailVerificationTokenRepository emailVerificationTokenRepository;
+    private final EmailService emailService;
+
     @Value("${jwt.expiration}")
     private Long jwtExpiration;
     @Value("${jwt.token-type}")
     private String tokenType;
+    @Value("${domain}")
+    private String domain;
 
     @Override
     public ApiResponse register (RegisterRequest request){
@@ -75,6 +81,20 @@ public class AuthServiceImpl implements AuthService {
                 .roles(Set.of(customerRole))
                 .build();
         userRepository.save(user);
+
+        String verificationToken = UUID.randomUUID().toString();
+
+        EmailVerificationToken emailToken = EmailVerificationToken.builder().
+                token(verificationToken)
+                .expiresAt(LocalDateTime.now().plusHours(24))
+                .user(user)
+                .build();
+        emailVerificationTokenRepository.save(emailToken);
+
+        String verificationLink = domain + "/api/v1/auth/verify-email?token=" + verificationToken;
+
+        emailService.sendVerificationEmail(user.getEmail(), verificationLink);
+
         return new ApiResponse(true,"User Registered SuccessFully");
     }
 
@@ -82,6 +102,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public AuthResponse login(LoginRequest request) {
     try{
+
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.email(),request.password()
@@ -98,6 +119,11 @@ public class AuthServiceImpl implements AuthService {
                                                                 "Invalid Email or Password"
                                                         )
                 );
+        if (!user.isEmailVerified()) {
+            throw new InvalidCredentialsException(
+                    "Please verify your email first"
+            );
+        }
 
         String accessToken =
                 jwtService.generateToken(
@@ -137,7 +163,7 @@ public class AuthServiceImpl implements AuthService {
         RefreshToken refreshToken = refreshTokenRepository
                 .findByToken(request.refreshToken())
                 .orElseThrow(
-                        () -> new RefreshTokenNotFoundException("")
+                        () -> new RefreshTokenNotFoundException("Refresh token not found")
                 );
         if( refreshToken .getExpiresAt() .isBefore( LocalDateTime .now() ) ){
             throw new InvalidCredentialsException("Refresh Token Expired");
@@ -188,4 +214,73 @@ public class AuthServiceImpl implements AuthService {
         return new ApiResponse(true, "Logout successful"
         );
     }
+
+    @Override
+    @Transactional
+    public ApiResponse verifyEmail( String token ) {
+
+        EmailVerificationToken emailToken =
+                emailVerificationTokenRepository
+                        .findByToken(token)
+                        .orElseThrow( () -> new InvalidCredentialsException( "Invalid verification token")
+                        );
+
+        if ( emailToken.getExpiresAt().isBefore(LocalDateTime.now()) )
+        {
+            emailVerificationTokenRepository.delete(emailToken);
+            throw new InvalidCredentialsException("Verification token expired");
+        }
+
+        User user = emailToken.getUser();
+
+        user.setEmailVerified(true);
+
+        userRepository.save(user);
+
+        emailVerificationTokenRepository.delete(emailToken);
+        return new ApiResponse(true, "Email verified successfully");
+    }
+
+    @Override
+    @Transactional
+    public ApiResponse resendVerificationEmail(
+            ResendVerificationRequest request
+    ) {
+
+        User user =
+                userRepository.findByEmail(request.email())
+                        .orElseThrow(() -> new InvalidCredentialsException("User not found"));
+
+        if (user.isEmailVerified())
+        {
+            return new ApiResponse(true, "Email already verified");
+        }
+
+
+        EmailVerificationToken emailToken =
+                emailVerificationTokenRepository
+                        .findByUser(user)
+                        .orElse(
+                                EmailVerificationToken
+                                        .builder()
+                                        .user(user)
+                                        .build()
+                        );
+
+        String verificationToken =
+                UUID.randomUUID().toString();
+
+        emailToken.setToken(verificationToken);
+        emailToken.setExpiresAt(
+                LocalDateTime.now().plusHours(24)
+        );
+
+        emailVerificationTokenRepository.save(emailToken);
+
+        String verificationLink ="http://"+ domain + "/api/v1/auth/verify-email?token=" + verificationToken;
+
+        emailService.sendVerificationEmail(user.getEmail(), verificationLink);
+        return new ApiResponse(true, "Verification email sent");
+    }
+
 }
