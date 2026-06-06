@@ -1,9 +1,6 @@
 package com.opencommerce.authservice.controller;
 
-import com.opencommerce.authservice.dto.request.LoginRequest;
-import com.opencommerce.authservice.dto.request.RefreshTokenRequest;
-import com.opencommerce.authservice.dto.request.RegisterRequest;
-import com.opencommerce.authservice.dto.request.ResendVerificationRequest;
+import com.opencommerce.authservice.dto.request.*;
 import com.opencommerce.authservice.dto.response.ApiResponse;
 import com.opencommerce.authservice.dto.response.AuthResponse;
 import com.opencommerce.authservice.dto.response.UserResponse;
@@ -12,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -56,4 +54,23 @@ public class AuthController {
     resendVerificationEmail(@Valid @RequestBody ResendVerificationRequest request) {
         return ResponseEntity.ok(authService.resendVerificationEmail(request));
     }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        return ResponseEntity.ok(authService.resetPassword(request));
+    }
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        return ResponseEntity.ok(authService.forgotPassword(request));
+    }
+//    @GetMapping("/admin")
+//    @PreAuthorize("hasRole('ADMIN')")
+//    public String admin() {
+//        return "Admin";
+//    }
+//    @GetMapping("/customer")
+//    @PreAuthorize("hasRole('CUSTOMER')")
+//    public String customer() {
+//        return "Customer";
+//    }
 }

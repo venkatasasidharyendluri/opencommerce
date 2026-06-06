@@ -1,5 +1,6 @@
 package com.opencommerce.authservice.security;
 
+import com.opencommerce.authservice.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -20,13 +21,20 @@ public class JwtService {
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
-    public String generateToken(String email){
+    public String generateToken(User user) {
+
         return Jwts.builder()
-                .subject(email)
+                .subject(user.getEmail())
+                .claim(
+                        "roles",
+                        user.getRoles()
+                                .stream()
+                                .map(role -> role.getName().name())
+                                .toList()
+                )
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis()+jwtExpiration))
-                .signWith(getSigningKey())
-                .compact();
+                .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
+                .signWith(getSigningKey()).compact();
     }
 
     public String extractEmail(String token){

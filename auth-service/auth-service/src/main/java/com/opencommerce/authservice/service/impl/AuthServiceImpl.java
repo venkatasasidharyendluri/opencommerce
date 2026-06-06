@@ -4,20 +4,14 @@ import com.opencommerce.authservice.dto.request.*;
 import com.opencommerce.authservice.dto.response.ApiResponse;
 import com.opencommerce.authservice.dto.response.AuthResponse;
 import com.opencommerce.authservice.dto.response.UserResponse;
-import com.opencommerce.authservice.entity.EmailVerificationToken;
-import com.opencommerce.authservice.entity.RefreshToken;
-import com.opencommerce.authservice.entity.Role;
-import com.opencommerce.authservice.entity.User;
+import com.opencommerce.authservice.entity.*;
 import com.opencommerce.authservice.enums.RoleType;
 import com.opencommerce.authservice.exception.InvalidCredentialsException;
 import com.opencommerce.authservice.exception.RefreshTokenNotFoundException;
 import com.opencommerce.authservice.exception.RoleNotFoundException;
 import com.opencommerce.authservice.exception.UserAlreadyExistsException;
 import com.opencommerce.authservice.mapper.UserMapper;
-import com.opencommerce.authservice.repository.EmailVerificationTokenRepository;
-import com.opencommerce.authservice.repository.RefreshTokenRepository;
-import com.opencommerce.authservice.repository.RoleRepository;
-import com.opencommerce.authservice.repository.UserRepository;
+import com.opencommerce.authservice.repository.*;
 import com.opencommerce.authservice.security.JwtService;
 import com.opencommerce.authservice.service.AuthService;
 import com.opencommerce.authservice.service.EmailService;
@@ -49,6 +43,7 @@ public class AuthServiceImpl implements AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final EmailService emailService;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Value("${jwt.expiration}")
     private Long jwtExpiration;
@@ -126,9 +121,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         String accessToken =
-                jwtService.generateToken(
-                        user.getEmail()
-                );
+                jwtService.generateToken(user);
         String refreshToken =
                 UUID.randomUUID().toString();
 
@@ -170,9 +163,7 @@ public class AuthServiceImpl implements AuthService {
         }
         User user = refreshToken.getUser();
         String accessToken =
-                jwtService.generateToken(
-                        user.getEmail()
-                );
+                jwtService.generateToken(user);
         return new AuthResponse(
                 accessToken,
                 refreshToken.getToken(),
@@ -243,9 +234,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public ApiResponse resendVerificationEmail(
-            ResendVerificationRequest request
-    ) {
+    public ApiResponse resendVerificationEmail(ResendVerificationRequest request) {
 
         User user =
                 userRepository.findByEmail(request.email())
@@ -281,6 +270,66 @@ public class AuthServiceImpl implements AuthService {
 
         emailService.sendVerificationEmail(user.getEmail(), verificationLink);
         return new ApiResponse(true, "Verification email sent");
+    }
+
+    @Override
+    @Transactional
+    public ApiResponse forgotPassword(ForgotPasswordRequest request) {
+        User user = userRepository.findByEmail(request.email())
+                .orElseThrow( () ->
+                        new InvalidCredentialsException("Account with this email not found")
+                );
+        PasswordResetToken resetToken =
+                passwordResetTokenRepository
+                        .findByUser(user)
+                        .orElse(PasswordResetToken.builder().user(user).build());
+
+        String token = UUID.randomUUID().toString();
+
+        resetToken.setToken(token);
+
+        resetToken.setExpiresAt(LocalDateTime.now().plusHours(1)
+        );
+
+        passwordResetTokenRepository.save(resetToken);
+        String resetLink = domain + "/api/v1/auth/reset-password?token=" + token;
+
+        emailService.sendPasswordResetEmail(user.getEmail(), resetLink);
+
+        return new ApiResponse(
+                true,
+                "Password reset email sent"
+        );
+
+    }
+
+    @Override
+    @Transactional
+    public ApiResponse resetPassword(ResetPasswordRequest request) {
+
+        PasswordResetToken resetToken =
+                passwordResetTokenRepository
+                        .findByToken(request.token())
+                        .orElseThrow(
+                                () -> new InvalidCredentialsException("Invalid reset token")
+                        );
+
+        if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            passwordResetTokenRepository.delete(resetToken);
+            throw new InvalidCredentialsException("Reset token expired");
+        }
+
+        User user = resetToken.getUser();
+
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+
+        user.setUpdatedAt(LocalDateTime.now());
+
+        userRepository.save(user);
+
+        passwordResetTokenRepository.delete(resetToken);
+
+        return new ApiResponse(true, "Password reset successful");
     }
 
 }

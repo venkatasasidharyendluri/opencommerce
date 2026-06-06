@@ -50,6 +50,112 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
+    @Override
+    public void sendPasswordResetEmail(
+            String to,
+            String resetLink
+    ) {
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+
+            MimeMessageHelper helper =
+                    new MimeMessageHelper(
+                            message,
+                            true,
+                            "UTF-8"
+                    );
+
+            helper.setFrom(fromEmail, "OpenCommerce Team");
+
+            helper.setTo(to);
+
+            helper.setSubject(
+                    "Reset Your Password - OpenCommerce"
+            );
+
+            String html = """
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; background:#f4f4f4;">
+
+            <div style="
+                max-width:600px;
+                margin:40px auto;
+                background:white;
+                padding:30px;
+                border-radius:8px;
+            ">
+
+                <h2>Reset Your Password</h2>
+
+                <p>
+                    We received a request to reset your password.
+                </p>
+
+                <p>
+                    Click the button below to create a new password.
+                </p>
+
+                <p style="text-align:center; margin:30px 0;">
+                    <a href="%s"
+                       style="
+                       background:#3498db;
+                       color:white;
+                       padding:14px 28px;
+                       text-decoration:none;
+                       border-radius:5px;
+                       ">
+                       Reset Password
+                    </a>
+                </p>
+
+                <p>
+                    If the button does not work, copy this link:
+                </p>
+
+                <p>%s</p>
+
+                <p>
+                    This link expires in 1 hour.
+                </p>
+
+                <p>
+                    If you did not request a password reset,
+                    please ignore this email.
+                </p>
+
+            </div>
+
+        </body>
+        </html>
+        """.formatted(resetLink, resetLink);
+
+            helper.setText(
+                    html,
+                    true
+            );
+
+            mailSender.send(message);
+
+            log.info(
+                    "Password reset email sent to {}",
+                    to
+            );
+
+        } catch (Exception ex) {
+
+            log.error(
+                    "Failed to send password reset email",
+                    ex
+            );
+
+            throw new RuntimeException(
+                    "Failed to send password reset email"
+            );
+        }
+    }
+
     private String buildHtmlEmail(String verificationLink) {
         return """
         <!DOCTYPE html>

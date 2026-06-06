@@ -19,4 +19,10 @@ public interface AuthService {
     ApiResponse verifyEmail(String token);
 
     ApiResponse resendVerificationEmail( ResendVerificationRequest request );
+
+    ApiResponse forgotPassword(
+            ForgotPasswordRequest request
+    );
+
+    ApiResponse resetPassword(ResetPasswordRequest request);
 }

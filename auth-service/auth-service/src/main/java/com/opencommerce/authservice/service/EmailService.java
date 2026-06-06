@@ -6,4 +6,5 @@ public interface EmailService {
             String to,
             String verificationLink
     );
+    void sendPasswordResetEmail(String to, String resetLink);
 }
