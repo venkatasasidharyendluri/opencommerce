@@ -37,8 +37,8 @@ public class JwtAuthenticationFilter
         String email = jwtService.extractEmail(jwt);
         if ( email != null && SecurityContextHolder .getContext() .getAuthentication() == null)
         {
-            UserDetails userDetails = customUserDetailsService.loadUserByUsername( email );
-            if (jwtService.isTokenValid(email, jwt))
+            CustomUserDetails userDetails = (CustomUserDetails) customUserDetailsService.loadUserByUsername( email );
+            if (jwtService.isTokenValid(userDetails, jwt))
             {
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
