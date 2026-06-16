@@ -14,12 +14,14 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+
     @Bean
     SecurityFilterChain securityFilterChain(
             HttpSecurity http
     ) throws Exception {
 
         http
+                .cors(cors -> {})
                 .csrf(
                         AbstractHttpConfigurer::disable
                 )
