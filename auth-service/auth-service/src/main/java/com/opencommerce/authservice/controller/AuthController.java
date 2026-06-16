@@ -4,12 +4,12 @@ import com.opencommerce.authservice.dto.request.*;
 import com.opencommerce.authservice.dto.response.ApiResponse;
 import com.opencommerce.authservice.dto.response.AuthResponse;
 import com.opencommerce.authservice.dto.response.UserResponse;
+import com.opencommerce.authservice.security.JwtService;
 import com.opencommerce.authservice.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;
+    private final JwtService jwtService;
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse> register(@Valid @RequestBody RegisterRequest request){
@@ -34,13 +35,37 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<UserResponse> getCurrentUser() {
-        return ResponseEntity.ok( authService.getCurrentUser() );
+    public ResponseEntity<UserResponse> getCurrentUser(
+            @RequestHeader("Authorization")
+            String authHeader
+    ) {
+
+        String jwt =
+                authHeader.substring(7);
+
+        return ResponseEntity.ok(
+                authService.getCurrentUser(
+                        jwtService.extractEmail(jwt)
+                )
+        );
     }
 
+
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse> logout() {
-        return ResponseEntity.ok(authService.logout()
+    public ResponseEntity<ApiResponse> logout(
+            @RequestHeader("Authorization")
+            String authHeader
+    ) {
+
+        String jwt =
+                authHeader.substring(7);
+
+        return ResponseEntity.ok(
+                authService.logout(
+                        jwtService.extractUserUuid(
+                                jwt
+                        )
+                )
         );
     }
 

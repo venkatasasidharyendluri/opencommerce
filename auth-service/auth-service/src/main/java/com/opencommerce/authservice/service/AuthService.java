@@ -12,9 +12,9 @@ public interface AuthService {
 
     AuthResponse refreshToken(RefreshTokenRequest request);
 
-    UserResponse getCurrentUser();
+    UserResponse getCurrentUser(String email);
 
-    ApiResponse logout();
+    ApiResponse logout(String userUuid);
 
     ApiResponse verifyEmail(String token);
 

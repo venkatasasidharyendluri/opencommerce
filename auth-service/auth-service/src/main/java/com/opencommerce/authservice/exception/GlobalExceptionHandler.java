@@ -58,6 +58,23 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(response);
     }
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleUserNotFound(
+            UserNotFoundException ex,
+            HttpServletRequest request
+    ) {
+
+        ErrorResponse response = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.NOT_FOUND.value(),
+                "User Not Found",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(response);
+    }
     @ExceptionHandler(RefreshTokenNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleRefreshTokenNotFound(
             RefreshTokenNotFoundException ex,

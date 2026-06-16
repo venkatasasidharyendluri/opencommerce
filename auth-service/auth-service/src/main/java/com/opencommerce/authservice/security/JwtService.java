@@ -1,31 +1,41 @@
 package com.opencommerce.authservice.security;
 
 import com.opencommerce.authservice.entity.User;
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.List;
+
+import io.jsonwebtoken.Claims;
 
 @Service
 public class JwtService {
+
     @Value("${jwt.secret}")
     private String secret;
+
     @Value("${jwt.expiration}")
     private Long jwtExpiration;
 
-    private SecretKey getSigningKey(){
-        return Keys.hmacShaKeyFor(secret.getBytes());
+    private SecretKey getSigningKey() {
+
+        return Keys.hmacShaKeyFor(
+                secret.getBytes()
+        );
     }
 
-    public String generateToken(User user) {
+    public String generateToken(
+            User user
+    ) {
 
         return Jwts.builder()
-                .subject(user.getEmail())
+                .subject(
+                        user.getEmail()
+                )
                 .claim(
                         "userUuid",
                         user.getUuid().toString()
@@ -34,58 +44,77 @@ public class JwtService {
                         "roles",
                         user.getRoles()
                                 .stream()
-                                .map(role -> role.getName().name())
+                                .map(
+                                        role -> role.getName().name()
+                                )
                                 .toList()
                 )
-                .issuedAt(new Date())
+                .issuedAt(
+                        new Date()
+                )
                 .expiration(
                         new Date(
                                 System.currentTimeMillis()
                                         + jwtExpiration
                         )
                 )
-                .signWith(getSigningKey())
+                .signWith(
+                        getSigningKey()
+                )
                 .compact();
     }
-    private Claims extractClaims(String token) {
+    private Claims extractClaims(
+            String token
+    ) {
 
         return Jwts.parser()
-                .verifyWith(getSigningKey())
+                .verifyWith(
+                        getSigningKey()
+                )
                 .build()
-                .parseSignedClaims(token)
+                .parseSignedClaims(
+                        token
+                )
                 .getPayload();
     }
-    public String extractEmail(String token){
+
+    public String extractEmail(
+            String token
+    ) {
 
         return extractClaims(token)
                 .getSubject();
     }
-    public String extractUserUuid(String token) {
 
-        return extractClaims(token)
-                .get("userUuid", String.class);
-
-    }
-    private Date extractExpiration(String token) {
-
-        return extractClaims(token).getExpiration();
-    }
-
-    private boolean isTokenExpired(String token) {
-
-        return extractExpiration(token).before(new Date());
-    }
-
-    public boolean isTokenValid(
-            UserDetails userDetails,
+    public String extractUserUuid(
             String token
     ) {
 
-        return extractEmail(token)
-                .equals(
-                        userDetails.getUsername()
-                )
-                &&
-                !isTokenExpired(token);
+        return extractClaims(token)
+                .get(
+                        "userUuid",
+                        String.class
+                );
+    }
+
+    public boolean isTokenValid(
+            String token
+    ) {
+
+        return !extractClaims(token)
+                .getExpiration()
+                .before(
+                        new Date()
+                );
+    }
+    public List<String> extractRoles(
+            String token
+    ) {
+
+        return extractClaims(token)
+                .get(
+                        "roles",
+                        List.class
+                );
     }
 }

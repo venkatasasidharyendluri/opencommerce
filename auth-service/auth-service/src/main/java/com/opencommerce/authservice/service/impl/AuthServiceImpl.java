@@ -6,10 +6,7 @@ import com.opencommerce.authservice.dto.response.AuthResponse;
 import com.opencommerce.authservice.dto.response.UserResponse;
 import com.opencommerce.authservice.entity.*;
 import com.opencommerce.authservice.enums.RoleType;
-import com.opencommerce.authservice.exception.InvalidCredentialsException;
-import com.opencommerce.authservice.exception.RefreshTokenNotFoundException;
-import com.opencommerce.authservice.exception.RoleNotFoundException;
-import com.opencommerce.authservice.exception.UserAlreadyExistsException;
+import com.opencommerce.authservice.exception.*;
 import com.opencommerce.authservice.mapper.UserMapper;
 import com.opencommerce.authservice.repository.*;
 import com.opencommerce.authservice.security.JwtService;
@@ -173,36 +170,51 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public UserResponse getCurrentUser() {
+    public UserResponse getCurrentUser(
+            String email
+    ) {
 
-        Authentication authentication =
-                SecurityContextHolder
-                        .getContext()
-                        .getAuthentication();
-        String email =
-                authentication.getName();
-        User user = userRepository.findByEmail(email)
-                        .orElseThrow( () -> new InvalidCredentialsException( "User not found" ) );
+        User user =
+                userRepository
+                        .findByEmail(email)
+                        .orElseThrow(
+                                () -> new UserNotFoundException(
+                                        "User not found"
+                                )
+                        );
 
-        return userMapper.toUserResponse(user);
+        return userMapper.toUserResponse(
+                user
+        );
     }
 
     @Override
     @Transactional
-    public ApiResponse logout() {
+    public ApiResponse logout(
+            String userUuid
+    ) {
 
-        Authentication authentication = SecurityContextHolder.getContext()
-                                                                                     .getAuthentication();
+        User user =
+                userRepository
+                        .findByUuid(
+                                UUID.fromString(
+                                        userUuid
+                                )
+                        )
+                        .orElseThrow(
+                                () ->
+                                        new InvalidCredentialsException(
+                                                "User not found"
+                                        )
+                        );
 
-        String email = authentication.getName();
+        refreshTokenRepository.deleteByUser(
+                user
+        );
 
-        User user = userRepository
-                        .findByEmail(email)
-                        .orElseThrow( () -> new InvalidCredentialsException( "User not found") );
-
-        refreshTokenRepository.deleteByUser(user);
-
-        return new ApiResponse(true, "Logout successful"
+        return new ApiResponse(
+                true,
+                "Logout successful"
         );
     }
 

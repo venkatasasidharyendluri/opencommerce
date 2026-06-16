@@ -2,7 +2,7 @@ package com.opencommerce.catalogservice.config;
 
 
 
-import jakarta.ws.rs.HttpMethod;
+import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
