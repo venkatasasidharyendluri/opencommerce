@@ -34,4 +34,8 @@ public interface OrderService {
             UUID orderUuid,
             OrderStatus status
     );
+
+    List<OrderResponse> getAllOrders();
+
+    OrderResponse getOrderForAdmin(UUID orderUuid);
 }

@@ -50,9 +50,18 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    public List<CategoryResponse> getAllCategories() {
+    public List<CategoryResponse> getAllCategoriesOnlyActive() {
 
         return categoryRepository.findByActiveTrue()
+                .stream()
+                .map(categoryMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    public List<CategoryResponse> getAllCategories() {
+
+        return categoryRepository.findAll()
                 .stream()
                 .map(categoryMapper::toResponse)
                 .toList();
@@ -66,7 +75,11 @@ public class CategoryServiceImpl implements CategoryService {
                 );
         category.setName(request.name());
         category.setDescription(request.description());
-        category.setActive(request.active());
+        if (request.active() != null) {
+            category.setActive(
+                    request.active()
+            );
+        }
         categoryRepository.save(category);
         return new ApiResponse(true, "Category Updated Successfully");
     }

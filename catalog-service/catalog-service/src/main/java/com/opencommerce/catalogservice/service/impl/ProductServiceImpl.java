@@ -72,9 +72,18 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    public List<ProductResponse> getAllProductsByActive() {
+
+        return productRepository.findByActiveTrueAndCategoryActiveTrue()
+                .stream()
+                .map(productMapper::toResponse)
+                .toList();
+    }
+
+    @Override
     public List<ProductResponse> getAllProducts() {
 
-        return productRepository.findByActiveTrue()
+        return productRepository.findAll()
                 .stream()
                 .map(productMapper::toResponse)
                 .toList();
@@ -82,17 +91,25 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<ProductResponse> getProductsByCategory(UUID categoryUuid) {
+
         Category category =
                 categoryRepository
                         .findByUuid(categoryUuid)
-                        .orElseThrow(() -> new CategoryNotFoundException("Category Not Found"));
+                        .orElseThrow(
+                                () -> new CategoryNotFoundException(
+                                        "Category Not Found"
+                                )
+                        );
+
+        if (!category.getActive()) {
+            return List.of();
+        }
 
         return productRepository
                 .findByCategoryAndActiveTrue(category)
                 .stream()
                 .map(productMapper::toResponse)
                 .toList();
-
     }
 
     @Override

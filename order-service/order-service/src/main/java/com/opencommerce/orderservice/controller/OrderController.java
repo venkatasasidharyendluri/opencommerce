@@ -121,4 +121,24 @@ public class OrderController {
                 )
         );
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/all")
+    public ResponseEntity<List<OrderResponse>>
+    getAllOrders() {
+
+        return ResponseEntity.ok(
+                orderService.getAllOrders()
+        );
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/admin/{orderUuid}")
+    public ResponseEntity<OrderResponse> getOrderForAdmin(
+            @PathVariable UUID orderUuid
+    ) {
+        return ResponseEntity.ok(
+                orderService.getOrderForAdmin(orderUuid)
+        );
+    }
 }

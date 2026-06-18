@@ -16,6 +16,8 @@ public interface CategoryService {
 
     List<CategoryResponse> getAllCategories();
 
+    List<CategoryResponse> getAllCategoriesOnlyActive();
+
     ApiResponse updateCategory(UUID uuid, UpdateCategoryRequest request);
 
     ApiResponse deleteCategory(UUID uuid);

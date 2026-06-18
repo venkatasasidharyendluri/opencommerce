@@ -29,10 +29,15 @@ public class CategoryController {
                 .body(categoryService.createCategory(request));
     }
 
-    @GetMapping
+    @GetMapping("/all")
     public ResponseEntity<List<CategoryResponse>> getAllCategories() {
 
         return ResponseEntity.ok(categoryService.getAllCategories());
+    }
+    @GetMapping
+    public ResponseEntity<List<CategoryResponse>> getAllCategoriesOnlyActive() {
+
+        return ResponseEntity.ok(categoryService.getAllCategoriesOnlyActive());
     }
 
     @GetMapping("/{uuid}")

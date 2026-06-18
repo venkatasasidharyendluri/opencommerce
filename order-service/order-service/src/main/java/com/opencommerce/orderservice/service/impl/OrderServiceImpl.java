@@ -10,6 +10,7 @@ import com.opencommerce.orderservice.entity.Address;
 import com.opencommerce.orderservice.entity.Order;
 import com.opencommerce.orderservice.entity.OrderItem;
 import com.opencommerce.orderservice.enums.OrderStatus;
+import com.opencommerce.orderservice.exceptions.OrderNotFoundException;
 import com.opencommerce.orderservice.mapper.OrderMapper;
 import com.opencommerce.orderservice.repository.AddressRepository;
 import com.opencommerce.orderservice.repository.OrderRepository;
@@ -302,5 +303,30 @@ public class OrderServiceImpl
                 true,
                 "Order Status Updated Successfully"
         );
+    }
+
+    @Override
+    public List<OrderResponse> getAllOrders() {
+
+        return orderRepository.findAll()
+                .stream()
+                .map(orderMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    public OrderResponse getOrderForAdmin(
+            UUID orderUuid
+    ) {
+
+        Order order =
+                orderRepository.findByUuid(orderUuid)
+                        .orElseThrow(
+                                () -> new OrderNotFoundException(
+                                        "Order Not Found"
+                                )
+                        );
+
+        return orderMapper.toResponse(order);
     }
 }
